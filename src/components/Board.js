@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import List from "./List";
-import { DragDropContext, Droppable } from "react-beautiful-dnd";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 const Board = () => {
   const [lists, setLists] = useState([]);
@@ -143,7 +143,7 @@ const Board = () => {
         Add List
       </button>
       <DragDropContext onDragEnd={handleDragEnd}>
-        <Droppable droppableId="lists" direction="horizontal" type="list">
+        <Droppable droppableId="board" direction="horizontal" type="list">
           {(provided) => (
             <div
               className="flex gap-4 overflow-x-scroll"
@@ -151,16 +151,26 @@ const Board = () => {
               {...provided.droppableProps}
             >
               {lists.map((list, index) => (
-                <List
-                  key={`list-${list.id}`}
-                  list={list}
-                  index={index}
-                  addCard={addCard}
-                  deleteList={deleteList}
-                  renameList={renameList}
-                  updateCard={updateCard}
-                  deleteCard={deleteCard}
-                />
+                <Draggable key={`list-${list.id}`} draggableId={list.id} index={index}>
+                  {(provided) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                    >
+                      <List
+                        key={`list-${list.id}`}
+                        list={list}
+                        index={index}
+                        addCard={addCard}
+                        deleteList={deleteList}
+                        renameList={renameList}
+                        updateCard={updateCard}
+                        deleteCard={deleteCard}
+                      />
+                    </div>
+                  )}
+                </Draggable>
               ))}
               {provided.placeholder}
             </div>
