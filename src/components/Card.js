@@ -1,17 +1,17 @@
 import React, { useState } from "react";
 import { Draggable } from "react-beautiful-dnd";
 
-const Card = ({ card, index, listId, updateCard, deleteCard }) => {
+const Card = ({ card, index, listIndex, updateCard, deleteCard }) => {
   const [showModal, setShowModal] = useState(false);
   const [editedCard, setEditedCard] = useState({ ...card });
 
   const handleSave = () => {
-    updateCard(listId, card.id, editedCard);
+    updateCard(listIndex, index, editedCard);
     setShowModal(false);
   };
 
   return (
-    <Draggable draggableId={card.id.toString()} index={index}>
+    <Draggable draggableId={card.id} index={index}>
       {(provided) => (
         <>
           <div
@@ -22,6 +22,16 @@ const Card = ({ card, index, listId, updateCard, deleteCard }) => {
             onClick={() => setShowModal(true)}
           >
             <h3>{card.title}</h3>
+            {card.description && (
+              <p className="text-sm text-gray-600 mt-1 truncate">
+                {card.description}
+              </p>
+            )}
+            {card.dueDate && (
+              <div className="text-xs text-gray-500 mt-1">
+                Due: {new Date(card.dueDate).toLocaleDateString()}
+              </div>
+            )}
           </div>
           {showModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -60,7 +70,7 @@ const Card = ({ card, index, listId, updateCard, deleteCard }) => {
                     Save
                   </button>
                   <button
-                    onClick={() => deleteCard(listId, card.id)}
+                    onClick={() => deleteCard(listIndex, index)}
                     className="bg-red-500 text-white px-4 py-2 rounded"
                   >
                     Delete

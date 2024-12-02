@@ -15,12 +15,12 @@ const List = ({
   const [newTitle, setNewTitle] = useState(list.title);
 
   const handleRename = () => {
-    renameList(list.id, newTitle);
+    renameList(index, newTitle);
     setIsEditing(false);
   };
 
   return (
-    <Draggable draggableId={list.id.toString()} index={index}>
+    <Draggable draggableId={`list-${list.id || index}`} index={index}>
       {(provided) => (
         <div
           className="bg-gray-100 p-4 rounded shadow w-64 flex-shrink-0"
@@ -52,25 +52,28 @@ const List = ({
               </h2>
             )}
             <button
-              onClick={() => deleteList(list.id)}
+              onClick={() => deleteList(index)}
               className="text-red-500 hover:underline"
             >
               Delete
             </button>
           </div>
-          <Droppable droppableId={list.id.toString()} type="card">
+          <Droppable 
+            droppableId={`${index}`} 
+            type="card"
+          >
             {(provided) => (
               <div
                 className="flex flex-col gap-2"
                 ref={provided.innerRef}
                 {...provided.droppableProps}
               >
-                {list.cards.map((card, index) => (
+                {list.cards.map((card, cardIndex) => (
                   <Card
-                    key={card.id}
+                    key={`card-${card.id || cardIndex}`}
                     card={card}
-                    index={index}
-                    listId={list.id}
+                    index={cardIndex}
+                    listIndex={index}
                     updateCard={updateCard}
                     deleteCard={deleteCard}
                   />
@@ -82,7 +85,7 @@ const List = ({
           <button
             onClick={() => {
               const title = prompt("Enter card title:");
-              if (title) addCard(list.id, title);
+              if (title) addCard(index, title);
             }}
             className="bg-green-500 text-white px-2 py-1 rounded mt-4 w-full"
           >

@@ -1,53 +1,71 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import List from "./List";
 import { DragDropContext, Droppable } from "react-beautiful-dnd";
 
 const Board = () => {
-  const [lists, setLists] = useState(
-    JSON.parse(localStorage.getItem("boardData")) || []
-  );
+  const [lists, setLists] = useState([]);
 
-  const saveToLocalStorage = (data) => {
+  useEffect(() => {
+    const storedData = localStorage.getItem("boardData");
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        setLists(parsedData);
+      } catch (error) {
+        console.error("Error parsing localStorage data:", error);
+      }
+    }
+  }, []);
+
+  const saveToLocalStorage = useCallback((data) => {
     localStorage.setItem("boardData", JSON.stringify(data));
-  };
+  }, []);
 
   const addList = (title) => {
-    const newLists = [...lists, { id: Date.now(), title, cards: [] }];
+    const newLists = [...lists, { id: `${Date.now()}-${Math.random()}`, title, cards: [] }];
     setLists(newLists);
     saveToLocalStorage(newLists);
   };
 
-  const deleteList = (id) => {
-    const updatedLists = lists.filter((list) => list.id !== id);
+  const deleteList = (index) => {
+    const updatedLists = lists.filter((_, listIndex) => listIndex !== index);
     setLists(updatedLists);
     saveToLocalStorage(updatedLists);
   };
 
-  const renameList = (id, newTitle) => {
-    const updatedLists = lists.map((list) =>
-      list.id === id ? { ...list, title: newTitle } : list
+  const renameList = (index, newTitle) => {
+    const updatedLists = lists.map((list, listIndex) =>
+      listIndex === index ? { ...list, title: newTitle } : list
     );
     setLists(updatedLists);
     saveToLocalStorage(updatedLists);
   };
 
-  const addCard = (listId, title) => {
-    const updatedLists = lists.map((list) =>
-      list.id === listId
-        ? { ...list, cards: [...list.cards, { id: Date.now(), title, description: "", dueDate: "" }] }
+  const addCard = (listIndex, title) => {
+    const newCard = {
+      id: `${Date.now()}-${Math.random()}`,
+      title,
+      description: "",
+      dueDate: "",
+    };
+
+    const updatedLists = lists.map((list, index) =>
+      index === listIndex
+        ? { ...list, cards: [...list.cards, newCard] }
         : list
     );
+
     setLists(updatedLists);
     saveToLocalStorage(updatedLists);
   };
 
-  const updateCard = (listId, cardId, updatedCard) => {
-    const updatedLists = lists.map((list) =>
-      list.id === listId
+  const updateCard = (listIndex, cardIndex, updatedCard) => {
+    const updatedLists = lists.map((list, index) =>
+      index === listIndex
         ? {
             ...list,
-            cards: list.cards.map((card) =>
-              card.id === cardId ? { ...card, ...updatedCard } : card
+            cards: list.cards.map((card, cIndex) =>
+              cIndex === cardIndex ? { ...card, ...updatedCard } : card
             ),
           }
         : list
@@ -56,46 +74,62 @@ const Board = () => {
     saveToLocalStorage(updatedLists);
   };
 
-  const deleteCard = (listId, cardId) => {
-    const updatedLists = lists.map((list) =>
-      list.id === listId
-        ? { ...list, cards: list.cards.filter((card) => card.id !== cardId) }
+  const deleteCard = (listIndex, cardIndex) => {
+    const updatedLists = lists.map((list, index) =>
+      index === listIndex
+        ? { ...list, cards: list.cards.filter((_, cIndex) => cIndex !== cardIndex) }
         : list
     );
     setLists(updatedLists);
     saveToLocalStorage(updatedLists);
   };
 
-  const handleDragEnd = (result) => {
-    console.log(result);
-    const { source, destination, type } = result;
+  const handleDragEnd = useCallback(
+    (result) => {
+      const { source, destination, type } = result;
 
-    if (!destination) return;
+      if (!destination) return;
 
-    if (type === "list") {
-      const reorderedLists = Array.from(lists);
-      const [movedList] = reorderedLists.splice(source.index, 1);
-      reorderedLists.splice(destination.index, 0, movedList);
-      setLists(reorderedLists);
-      saveToLocalStorage(reorderedLists);
-    } else {
-      const sourceList = lists.find((list) => list.id.toString() === source.droppableId);
-      const destinationList = lists.find(
-        (list) => list.id.toString() === destination.droppableId
-      );
+      const newLists = Array.from(lists);
 
-      const [movedCard] = sourceList.cards.splice(source.index, 1);
+      if (type === "list") {
+        const [reorderedList] = newLists.splice(source.index, 1);
+        newLists.splice(destination.index, 0, reorderedList);
 
-      if (sourceList === destinationList) {
-        sourceList.cards.splice(destination.index, 0, movedCard);
-      } else {
-        destinationList.cards.splice(destination.index, 0, movedCard);
+        setLists(newLists);
+        saveToLocalStorage(newLists);
+        return;
       }
 
-      setLists([...lists]);
-      saveToLocalStorage(lists);
-    }
-  };
+      const sourceListIndex = parseInt(source.droppableId, 10);
+      const destListIndex = parseInt(destination.droppableId, 10);
+
+      if (sourceListIndex === destListIndex) {
+        const list = newLists[sourceListIndex];
+        const updatedCards = Array.from(list.cards);
+        const [movedCard] = updatedCards.splice(source.index, 1);
+        updatedCards.splice(destination.index, 0, movedCard);
+
+        newLists[sourceListIndex] = { ...list, cards: updatedCards };
+      } else {
+        const sourceList = newLists[sourceListIndex];
+        const destList = newLists[destListIndex];
+
+        const sourceCards = Array.from(sourceList.cards);
+        const destCards = Array.from(destList.cards);
+
+        const [movedCard] = sourceCards.splice(source.index, 1);
+        destCards.splice(destination.index, 0, movedCard);
+
+        newLists[sourceListIndex] = { ...sourceList, cards: sourceCards };
+        newLists[destListIndex] = { ...destList, cards: destCards };
+      }
+
+      setLists(newLists);
+      saveToLocalStorage(newLists);
+    },
+    [lists, saveToLocalStorage]
+  );
 
   return (
     <div className="p-4">
@@ -109,11 +143,7 @@ const Board = () => {
         Add List
       </button>
       <DragDropContext onDragEnd={handleDragEnd}>
-        <Droppable
-          droppableId="board"
-          direction="horizontal"
-          type="list"
-        >
+        <Droppable droppableId="lists" direction="horizontal" type="list">
           {(provided) => (
             <div
               className="flex gap-4 overflow-x-scroll"
@@ -122,7 +152,7 @@ const Board = () => {
             >
               {lists.map((list, index) => (
                 <List
-                  key={list.id}
+                  key={`list-${list.id}`}
                   list={list}
                   index={index}
                   addCard={addCard}
@@ -142,4 +172,3 @@ const Board = () => {
 };
 
 export default Board;
-
